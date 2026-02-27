@@ -1,57 +1,72 @@
 library(tidyverse)
 
-barcelona <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/barcelona.csv")
-london <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/london.csv")
-madrid <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/madrid.csv")
-delhi <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/delhi.csv")
-nyc <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/nyc.csv")
-paris <- read.csv("/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/paris.csv")
+barcelona <- read.csv("")
+london <- read.csv("")
+madrid <- read.csv("")
+delhi <- read.csv("")
+nyc <- read.csv("")
+paris <- read.csv("")
 
+# Joining transformation
 madrid$X <- as.character(madrid$X)
 madrid$parse_count <- as.character(madrid$parse_count)
 madrid$rating_review <- as.character(madrid$rating_review)
-
 full <- bind_rows(barcelona, delhi, london, madrid, nyc, paris)
 
-set.seed(2)
-sample <- full %>% 
-  group_by(city) %>%
-  sample_frac(0.10) %>%
-  ungroup()
+# Duplicates
+any(duplicated(full$review_id))
+full <- full[!duplicated(full$review_id), ]
+any(duplicated(full$review_id))
+## 2756038 before removal of duplciation; 2756028 after removal, 10 duplicates
 
-sample[sample == ""] <- NA
-sum(is.na(sample)) 
-# 24 NA's, due to file corruption, tuple overlap
+# NA's
+full[full == ""] <- NA
+sum(is.na(full)) 
+## 114 Na's out of 2.75million, omitting won't hurt
+## After inspection, Na's are caused from file corruption
+full <- na.omit(full)
 
-sample <- na.omit(sample)
-
-# checking if aligned
-sample$parse_count <- as.numeric(sample$parse_count) 
-
-# Removing unnecessary columns which are factless
+# Column cleaning
+## Removing unnecessary columns which are irrelevant to us
 sample <- sample[,-c(1,2,6,8,12)]
+full <- full[, !names(full) %in% c("X", "parse_count", "review_id", "review_preview", "url_restaurant")]
+## removed X, parse_count, and review_id due to its surrogate nature, no analytical quality
+## removed review_preview due to title and full review present in data
+## removed restaurant URL as it is redundant, could still use for more data...
 
 # Cleaning data domains
-sample$rating_review <- as.numeric(sample$rating_review)
-sample$sample <- ifelse(sample$sample == "Positive", 1,0)
-sample$bin <- ifelse(sample$rating_review %in% c(4,5), "positive", 
-                            ifelse(sample$rating_review %in% c(1,2), "negative", "neutral"))
-sample$date <- as.Date(sample$date, format = "%B %d, %Y")
+full$rating_review <- as.numeric(full$rating_review)
+full$sample <- ifelse(full$sample == "Positive", 1,0)
+full$bin <- ifelse(full$rating_review %in% c(4,5), "positive", 
+                     ifelse(full$rating_review %in% c(1,2), "negative", "neutral"))
+full$date <- as.Date(full$date, format = "%B %d, %Y")
 
-# Anomalies with the names, some are not fully developed, so change is done
-unique(sample$city) 
-sample$city[startsWith(sample$city, "Barcelona")] <- "barcelona"
-sample$city[startsWith(sample$city, "London")] <- "london"
-sample$city[startsWith(sample$city, "New_Delhi")] <- "delhi"
-sample$city[startsWith(sample$city, "Madrid")] <- "madrid"
-sample$city[startsWith(sample$city, "New_York")] <- "nyc"
-sample$city[startsWith(sample$city, "Paris")] <- "paris"
-unique(sample$city) # double check 
+## Balance check
+table(full$bin)
 
-# Re arranged for simplicity (GPT generated)
-sample <- sample %>%
+# Naming
+## Anomalies with the names, some are not fully developed, so change is done
+unique(full$city) 
+full$city[startsWith(full$city, "Barcelona")] <- "barcelona"
+full$city[startsWith(full$city, "London")] <- "london"
+full$city[startsWith(full$city, "New_Delhi")] <- "delhi"
+full$city[startsWith(full$city, "Madrid")] <- "madrid"
+full$city[startsWith(full$city, "New_York")] <- "nyc"
+full$city[startsWith(full$city, "Paris")] <- "paris"
+unique(full$city) # double check 
+
+# Re arranged for simplicity (this section is GPT generated)
+full <- full %>%
   relocate(review_full, .after = last_col())
-sample <- sample %>%
+full <- full %>%
   relocate(bin, .after = rating_review)
 
-write.csv(sample, file = "/Users/petarfabinger/Desktop/University/AA:: BA/Y3S2P4/Research/data/clean.csv")
+# Sampling
+set.seed(2)
+p <- 0.10
+sample <- full %>% 
+  group_by(city) %>%
+  sample_frac(p) %>%
+  ungroup()
+
+write.csv(sample, file = "")
