@@ -28,7 +28,6 @@ full <- na.omit(full)
 
 # Column cleaning
 ## Removing unnecessary columns which are irrelevant to us
-sample <- sample[,-c(1,2,6,8,12)]
 full <- full[, !names(full) %in% c("X", "parse_count", "review_id", "review_preview", "url_restaurant")]
 ## removed X, parse_count, and review_id due to its surrogate nature, no analytical quality
 ## removed review_preview due to title and full review present in data
